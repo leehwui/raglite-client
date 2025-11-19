@@ -1,36 +1,152 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# RAGLite Client
+
+A modern, responsive chat interface for the RAGLite AI assistant, built with Next.js, TypeScript, and Tailwind CSS.
+
+## Features
+
+- **Modern Chat Interface**: Clean, intuitive design inspired by leading AI chat applications
+- **Real-time Messaging**: Instant message delivery with typing indicators
+- **Responsive Design**: Works seamlessly on desktop and mobile devices
+- **Dark Mode Support**: Automatic dark/light mode based on system preferences
+- **TypeScript**: Full type safety throughout the application
+- **API Integration**: Ready to connect with the RAGLite backend API
+
+## Tech Stack
+
+- **Framework**: Next.js 16 with App Router
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS
+- **State Management**: Zustand
+- **HTTP Client**: Axios
+- **Icons**: Lucide React
+- **UI Components**: Material-UI (for future enhancements)
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
+- Node.js 18+
+- npm or yarn
+- RAGLite backend server running (default: http://localhost:8000)
+
+### Installation
+
+1. Clone the repository:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone <repository-url>
+cd raglite-client
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Install dependencies:
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Create environment file:
+```bash
+cp .env.example .env.local
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+4. Configure your API endpoint in `.env.local`:
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
 
-## Learn More
+5. Start the development server:
+```bash
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+6. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Project Structure
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+src/
+├── app/                    # Next.js App Router
+│   ├── layout.tsx         # Root layout
+│   ├── page.tsx           # Main chat page
+│   └── globals.css        # Global styles
+├── components/            # React components
+│   ├── ChatMessage.tsx    # Individual message component
+│   └── ChatInput.tsx      # Message input component
+└── lib/                   # Utilities and services
+    ├── api.ts            # API service for RAGLite backend
+    └── chat-store.ts     # Zustand store for chat state
+```
 
-## Deploy on Vercel
+## Available Scripts
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run start` - Start production server
+- `npm run lint` - Run ESLint
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## API Integration
+
+The client communicates with the RAGLite backend through REST API calls. The main endpoint is:
+
+- `POST /api/rag` - Send a query and receive AI-generated response
+
+### Request Format
+```typescript
+{
+  query: string;
+  context?: string;
+  max_tokens?: number;
+}
+```
+
+### Response Format
+```typescript
+{
+  response: string;
+  sources?: string[];
+  metadata?: Record<string, unknown>;
+}
+```
+
+## Development
+
+### Adding New Features
+
+1. **Components**: Add new components in `src/components/`
+2. **API Calls**: Extend the `RAGApiService` in `src/lib/api.ts`
+3. **State Management**: Update the chat store in `src/lib/chat-store.ts`
+4. **Styling**: Use Tailwind CSS classes or extend the design system
+
+### Environment Variables
+
+- `NEXT_PUBLIC_API_URL`: URL of the RAGLite backend API
+
+## Deployment
+
+### Build for Production
+
+```bash
+npm run build
+npm run start
+```
+
+### Deploy to Vercel
+
+1. Push your code to GitHub
+2. Connect your repository to Vercel
+3. Set environment variables in Vercel dashboard
+4. Deploy
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## License
+
+This project is part of the RAGLite ecosystem. See the main RAGLite repository for licensing information.
+
+## Version
+
+Current version: 0.1.0
