@@ -8,7 +8,7 @@ import { ragApi } from '@/lib/api';
 import { MessageSquare, Sparkles } from 'lucide-react';
 
 export default function Home() {
-  const { messages, isLoading, addMessage, setLoading } = useChatStore();
+  const { messages, isLoading, datasets, selectedDataset, addMessage, setLoading, setDatasets, setSelectedDataset, startStreamingMessage } = useChatStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -19,22 +19,46 @@ export default function Home() {
     scrollToBottom();
   }, [messages]);
 
+  useEffect(() => {
+    // Fetch available datasets on component mount
+    const fetchDatasets = async () => {
+      try {
+        const datasetsResponse = await ragApi.listDatasets();
+        const availableDatasets = datasetsResponse.datasets || [];
+        setDatasets(availableDatasets);
+        // Auto-select the first dataset if none is selected
+        if (availableDatasets.length > 0 && !selectedDataset) {
+          setSelectedDataset(availableDatasets[0].index_name);
+        }
+      } catch (error) {
+        console.error('Failed to fetch datasets:', error);
+      }
+    };
+
+    fetchDatasets();
+  }, [setDatasets, setSelectedDataset, selectedDataset]);
+
   const handleSendMessage = async (content: string) => {
     // Add user message
     addMessage({ content, role: 'user' });
 
-    // Call RAG API
-    setLoading(true);
-    try {
-      const response = await ragApi.sendMessage({ query: content });
+    // Check if we have a selected dataset
+    if (!selectedDataset) {
       addMessage({
-        content: response.response,
+        content: 'Please select a dataset first before sending a message.',
         role: 'assistant'
       });
+      return;
+    }
+
+    // Start streaming response
+    setLoading(true);
+    try {
+      await startStreamingMessage(content, selectedDataset);
     } catch (error) {
-      console.error('Failed to send message:', error);
+      console.error('Failed to start streaming:', error);
       addMessage({
-        content: 'Sorry, I encountered an error while processing your request. Please try again later.',
+        content: `Sorry, I encountered an error while processing your request: ${error instanceof Error ? error.message : 'Unknown error'}. Please make sure the RAGLite backend is running.`,
         role: 'assistant'
       });
     } finally {
@@ -125,7 +149,13 @@ export default function Home() {
         </div>
 
         {/* Input */}
-        <ChatInput onSendMessage={handleSendMessage} disabled={isLoading} />
+        <ChatInput
+          onSendMessage={handleSendMessage}
+          datasets={datasets}
+          selectedDataset={selectedDataset}
+          onDatasetChange={setSelectedDataset}
+          disabled={isLoading}
+        />
       </div>
     </div>
   );
