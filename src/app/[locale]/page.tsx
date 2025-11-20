@@ -100,14 +100,14 @@ export default function Home() {
                   {t('chat.title')}
                 </h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Powered by advanced AI and retrieval-augmented generation
+                  {t('chat.poweredBy')}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-3">
               <LanguageSwitcher />
               <div className="text-sm text-gray-500 dark:text-gray-400">
-                v0.1.0
+                v0.1.1
               </div>
             </div>
           </div>
@@ -125,8 +125,7 @@ export default function Home() {
                   {t('chat.title')}
                 </h3>
                 <p className="text-gray-600 dark:text-gray-400 max-w-md">
-                  Start a conversation with our AI assistant. Ask questions, get help with tasks,
-                  or explore the power of retrieval-augmented generation.
+                  {t('chat.welcomeMessage')}
                 </p>
               </div>
             ) : (

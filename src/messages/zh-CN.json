@@ -18,7 +18,9 @@
     "streaming": "流式传输中...",
     "thinking": "思考中...",
     "error": "发生错误",
-    "noDataset": "请先选择数据集"
+    "noDataset": "请先选择数据集",
+    "poweredBy": "由先进AI和检索增强生成技术提供支持",
+    "welcomeMessage": "与我们的AI助手开始对话。提出问题，获取任务帮助，或探索检索增强生成的力量。"
   },
   "dataset": {
     "selectPlaceholder": "选择数据集...",

@@ -18,7 +18,9 @@
     "streaming": "Streaming...",
     "thinking": "Thinking...",
     "error": "An error occurred",
-    "noDataset": "Please select a dataset first"
+    "noDataset": "Please select a dataset first",
+    "poweredBy": "Powered by advanced AI and retrieval-augmented generation",
+    "welcomeMessage": "Start a conversation with our AI assistant. Ask questions, get help with tasks, or explore the power of retrieval-augmented generation."
   },
   "dataset": {
     "selectPlaceholder": "Select a dataset...",
