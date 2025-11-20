@@ -1,6 +1,6 @@
 # RAGLite Client
 
-A modern, responsive chat interface for the RAGLite AI assistant, built with Next.js, TypeScript, and Tailwind CSS.
+A simple example of how to consume the backend API, we leave the ability to extend it to the developers.
 
 ## Features
 
