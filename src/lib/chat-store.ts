@@ -6,6 +6,14 @@ export interface Message {
   content: string;
   role: 'user' | 'assistant';
   timestamp: Date;
+  // Performance metrics for assistant messages
+  performanceMetrics?: {
+    timeToFirstToken?: number; // milliseconds
+    totalResponseTime?: number; // milliseconds
+    tokenCount?: number;
+    model?: string;
+    dataset?: string;
+  };
 }
 
 export interface Dataset {
@@ -21,6 +29,8 @@ interface ChatState {
   datasets: Dataset[];
   selectedDataset: string | null;
   streamingMessageId: string | null;
+  streamingStartTime: number | null;
+  hasReceivedFirstToken: boolean;
   addMessage: (message: Omit<Message, 'id' | 'timestamp'> & { id?: string }) => void;
   setLoading: (loading: boolean) => void;
   clearMessages: () => void;
@@ -37,6 +47,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
   datasets: [],
   selectedDataset: null,
   streamingMessageId: null,
+  streamingStartTime: null,
+  hasReceivedFirstToken: false,
   addMessage: (message: Omit<Message, 'id' | 'timestamp'> & { id?: string }) =>
     set((state) => ({
       messages: [
@@ -55,6 +67,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
   startStreamingMessage: async (query: string, dataset?: string) => {
     // Generate unique ID for the new message
     const messageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Initialize performance tracking
+    const startTime = Date.now();
+    set({ streamingStartTime: startTime, hasReceivedFirstToken: false });
     
     // Add initial message with empty content
     get().addMessage({
@@ -108,10 +124,30 @@ export const useChatStore = create<ChatState>((set, get) => ({
               // Try to parse as JSON for token data
               try {
                 const data = JSON.parse(dataStr);
-                
+
+                // If the server sends a token chunk, append it
                 if (data.token) {
-                  // Update message with new token
                   get().updateStreamingMessage(messageId, data.token);
+                }
+
+                // If the server sends model info or metadata, store it in the message metrics
+                // Supported shapes: { model: 'name' } or { metadata: { model: 'name' } }
+                const modelName = data.model || data.metadata?.model || data.meta?.model;
+                if (modelName) {
+                  // Attach model to the in-flight message performance metrics
+                  set((state) => ({
+                    messages: state.messages.map((msg) =>
+                      msg.id === messageId
+                        ? {
+                            ...msg,
+                            performanceMetrics: {
+                              ...msg.performanceMetrics,
+                              model: modelName,
+                            },
+                          }
+                        : msg
+                    ),
+                  }));
                 }
               } catch (parseError) {
                 console.warn('Failed to parse SSE data as JSON:', dataStr, parseError);
@@ -131,16 +167,56 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
   updateStreamingMessage: (id, content) =>
-    set((state) => ({
-      messages: state.messages.map((msg) =>
-        msg.id === id ? { ...msg, content: msg.content + content } : msg
-      ),
-    })),
+    set((state) => {
+      const message = state.messages.find((msg) => msg.id === id);
+      if (!message) return state;
+
+      const currentTime = Date.now();
+      const isFirstToken = !state.hasReceivedFirstToken;
+      const timeToFirstToken = isFirstToken && state.streamingStartTime 
+        ? currentTime - state.streamingStartTime 
+        : message.performanceMetrics?.timeToFirstToken;
+      
+      // Estimate token count (rough approximation: ~4 characters per token)
+      const newTokenCount = Math.ceil((message.content + content).length / 4);
+      
+      return {
+        hasReceivedFirstToken: true,
+        messages: state.messages.map((msg) =>
+          msg.id === id ? { 
+            ...msg, 
+            content: msg.content + content,
+            performanceMetrics: {
+              ...msg.performanceMetrics,
+              timeToFirstToken,
+              tokenCount: newTokenCount,
+            }
+          } : msg
+        ),
+      };
+    }),
   finishStreamingMessage: (id) =>
-    set((state) => ({
-      streamingMessageId: null,
-      messages: state.messages.map((msg) =>
-        msg.id === id ? { ...msg, content: msg.content.trim() } : msg
-      ),
-    })),
+    set((state) => {
+      const endTime = Date.now();
+      const totalResponseTime = state.streamingStartTime ? endTime - state.streamingStartTime : undefined;
+      
+      return {
+        streamingMessageId: null,
+        streamingStartTime: null,
+        hasReceivedFirstToken: false,
+        messages: state.messages.map((msg) =>
+          msg.id === id ? { 
+            ...msg,
+            content: msg.content.trim(),
+            performanceMetrics: {
+              ...msg.performanceMetrics,
+              totalResponseTime,
+              // Preserve any model reported during streaming; otherwise leave undefined
+              model: msg.performanceMetrics?.model,
+              dataset: state.selectedDataset || 'default',
+            }
+          } : msg
+        ),
+      };
+    }),
 }));
