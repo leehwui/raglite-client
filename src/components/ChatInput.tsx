@@ -1,4 +1,5 @@
 import React, { useState, KeyboardEvent, useRef, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { Send, ChevronDown, Database } from 'lucide-react';
 import { Dataset } from '@/lib/chat-store';
 
@@ -11,6 +12,7 @@ interface ChatInputProps {
 }
 
 export function ChatInput({ onSendMessage, datasets, selectedDataset, onDatasetChange, disabled = false }: ChatInputProps) {
+  const t = useTranslations();
   const [message, setMessage] = useState('');
   const [showDatasetDropdown, setShowDatasetDropdown] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState<'up' | 'down'>('down');
@@ -79,7 +81,7 @@ export function ChatInput({ onSendMessage, datasets, selectedDataset, onDatasetC
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder="Type your message here..."
+                placeholder={t('chat.placeholder')}
                 disabled={disabled}
                 className="w-full resize-none bg-transparent border-none outline-none text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] max-h-32"
                 rows={1}
@@ -99,7 +101,7 @@ export function ChatInput({ onSendMessage, datasets, selectedDataset, onDatasetC
             <div className="px-4 py-3 flex items-center justify-between">
               {/* Help Text */}
               <div className="text-xs text-gray-500 dark:text-gray-400">
-                Press Enter to send, Shift+Enter for new line
+                {t('chat.helpText')}
               </div>
 
               {/* Dataset Selector and Send Button */}
@@ -113,7 +115,7 @@ export function ChatInput({ onSendMessage, datasets, selectedDataset, onDatasetC
                   >
                     <Database className="w-4 h-4" />
                     <span className="max-w-32 truncate">
-                      {selectedDatasetInfo ? selectedDatasetInfo.index_name.split('_')[0] : 'Select Dataset'}
+                      {selectedDatasetInfo ? selectedDatasetInfo.index_name.split('_')[0] : t('dataset.selectPlaceholder')}
                     </span>
                     <ChevronDown className={`w-4 h-4 transition-transform ${showDatasetDropdown ? 'rotate-180' : ''}`} />
                   </button>
@@ -133,7 +135,7 @@ export function ChatInput({ onSendMessage, datasets, selectedDataset, onDatasetC
                           }}
                           className="w-full text-left px-3 py-2 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
                         >
-                          Select a dataset...
+                          {t('dataset.selectPlaceholder')}
                         </button>
                         {datasets.map((dataset) => (
                           <button
@@ -150,7 +152,7 @@ export function ChatInput({ onSendMessage, datasets, selectedDataset, onDatasetC
                           >
                             <div className="font-medium truncate">{dataset.index_name}</div>
                             <div className="text-gray-500 dark:text-gray-400 text-xs">
-                              {dataset.document_count} docs, {dataset.dimensions}d
+                              {dataset.document_count} {t('dataset.documents')}, {dataset.dimensions}{t('dataset.dimensions')}
                             </div>
                           </button>
                         ))}

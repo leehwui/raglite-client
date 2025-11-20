@@ -1,0 +1,37 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close"
+  },
+  "chat": {
+    "title": "RAG Chat",
+    "placeholder": "Type your message here...",
+    "send": "Send",
+    "selectDataset": "Select Dataset",
+    "helpText": "Press Enter to send, Shift+Enter for new line",
+    "streaming": "Streaming...",
+    "thinking": "Thinking...",
+    "error": "An error occurred",
+    "noDataset": "Please select a dataset first"
+  },
+  "dataset": {
+    "selectPlaceholder": "Select a dataset...",
+    "documents": "docs",
+    "dimensions": "d"
+  },
+  "navigation": {
+    "home": "Home",
+    "settings": "Settings",
+    "help": "Help"
+  },
+  "language": {
+    "english": "English",
+    "chinese": "中文"
+  }
+}

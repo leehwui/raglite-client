@@ -1,0 +1,37 @@
+{
+  "common": {
+    "loading": "加载中...",
+    "error": "错误",
+    "cancel": "取消",
+    "confirm": "确认",
+    "save": "保存",
+    "delete": "删除",
+    "edit": "编辑",
+    "close": "关闭"
+  },
+  "chat": {
+    "title": "RAG 聊天",
+    "placeholder": "在这里输入您的消息...",
+    "send": "发送",
+    "selectDataset": "选择数据集",
+    "helpText": "按 Enter 发送，Shift+Enter 换行",
+    "streaming": "流式传输中...",
+    "thinking": "思考中...",
+    "error": "发生错误",
+    "noDataset": "请先选择数据集"
+  },
+  "dataset": {
+    "selectPlaceholder": "选择数据集...",
+    "documents": "文档",
+    "dimensions": "维"
+  },
+  "navigation": {
+    "home": "首页",
+    "settings": "设置",
+    "help": "帮助"
+  },
+  "language": {
+    "english": "English",
+    "chinese": "中文"
+  }
+}
