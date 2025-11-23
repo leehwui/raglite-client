@@ -1,7 +1,7 @@
 import React, { useState, KeyboardEvent, useRef, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { Send, ChevronDown, Database } from 'lucide-react';
-import { Dataset } from '@/lib/chat-store';
+import { Dataset } from '@/lib/chat-store.clean';
 
 interface ChatInputProps {
   onSendMessage: (message: string) => void;

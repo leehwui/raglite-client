@@ -1,6 +1,6 @@
 import React from 'react';
 import { ChevronDown, Database } from 'lucide-react';
-import { Dataset } from '@/lib/chat-store';
+import { Dataset } from '@/lib/chat-store.clean';
 
 interface DatasetSelectorProps {
   datasets: Dataset[];

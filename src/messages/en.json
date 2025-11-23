@@ -17,6 +17,7 @@
     "helpText": "Press Enter to send, Shift+Enter for new line",
     "streaming": "Streaming...",
     "thinking": "Thinking...",
+  "thoughts": "Thoughts",
     "error": "An error occurred",
     "noDataset": "Please select a dataset first",
     "poweredBy": "Powered by advanced AI and retrieval-augmented generation",

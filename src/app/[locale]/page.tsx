@@ -5,13 +5,13 @@ import { useTranslations } from 'next-intl';
 import { ChatMessage } from '@/components/ChatMessage';
 import { ChatInput } from '@/components/ChatInput';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
-import { useChatStore } from '@/lib/chat-store';
+import { useChatStore } from '@/lib/chat-store.clean';
 import { ragApi } from '@/lib/api';
 import { MessageSquare, Sparkles } from 'lucide-react';
 
 export default function Home() {
   const t = useTranslations();
-  const { messages, isLoading, datasets, selectedDataset, addMessage, setLoading, setDatasets, setSelectedDataset, startStreamingMessage } = useChatStore();
+  const { messages, isLoading, datasets, selectedDataset, addMessage, setLoading, setDatasets, setSelectedDataset, startStreamingMessage, debugEvents } = useChatStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -21,6 +21,10 @@ export default function Home() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    console.log('[page] messages updated', { count: messages.length });
+  }, [messages.length]);
 
   useEffect(() => {
     // Fetch available datasets on component mount
@@ -133,7 +137,7 @@ export default function Home() {
                 {messages.map((message) => (
                   <ChatMessage key={message.id} message={message} />
                 ))}
-                {isLoading && (
+                {isLoading && !messages.some((m) => m.isThinking) && (
                   <div className="flex justify-start mb-4">
                     <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl px-4 py-3 mr-12">
                       <div className="flex items-center gap-2">
@@ -161,6 +165,23 @@ export default function Home() {
           onDatasetChange={setSelectedDataset}
           disabled={isLoading}
         />
+        {/* Debug Panel (visible in dev only) */}
+        <div className="fixed bottom-4 right-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 max-w-xs text-xs text-gray-500 dark:text-gray-300 shadow-lg z-50">
+          <div className="font-semibold mb-2">Debug</div>
+          <div className="mb-1">Messages: {messages.length}</div>
+          <div className="mb-1">Message contents:</div>
+          <div className="max-h-28 overflow-y-auto text-xs leading-tight mb-2">
+            {messages.map((m) => (
+              <div key={m.id} className="mb-1">{m.id} {' '} {m.role} {' '} {m.isThinking ? '(thinking)' : ''} {' '} {m.content.slice(0,80)}</div>
+            ))}
+          </div>
+          <div className="mb-1">Selected dataset: {selectedDataset || 'none'}</div>
+          <div className="max-h-40 overflow-y-auto text-xs leading-tight">
+            {debugEvents.slice(-10).map((ev, idx) => (
+              <div key={idx} className="mb-1">{ev}</div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );

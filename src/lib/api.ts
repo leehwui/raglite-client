@@ -111,24 +111,23 @@ class RAGApiService {
         throw new Error(`Dataset '${indexName}' not found. Available datasets: ${availableNames}`);
       }
 
-      // Create URL for streaming
-      const url = new URL(`${API_BASE_URL}/rag/stream`);
-      const params = new URLSearchParams({
+      const requestData = {
         query: request.query,
         index_name: indexName,
-        top_k: String(request.top_k || 3),
-      });
-      url.search = params.toString();
+        top_k: request.top_k || 3,
+      };
 
-      console.log('Streaming URL:', url.toString());
+      console.log('Streaming request data:', requestData);
 
-      // Use fetch with streaming
-      const response = await fetch(url.toString(), {
-        method: 'GET',
+      // Use fetch with POST and streaming
+      const response = await fetch(`${API_BASE_URL}/rag/stream`, {
+        method: 'POST',
         headers: {
+          'Content-Type': 'application/json',
           'Accept': 'text/event-stream',
           'Cache-Control': 'no-cache',
         },
+        body: JSON.stringify(requestData),
       });
 
       if (!response.ok) {
