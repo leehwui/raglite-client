@@ -7,6 +7,9 @@ export interface RAGRequest {
   index_name?: string; // Dataset index to search in
   top_k?: number; // Number of documents to retrieve (default: 3)
   stream?: boolean; // Whether to stream response (default: true)
+  messages?: { role: 'user' | 'assistant' | 'system'; content: string; id?: string }[];
+  conversation_id?: string | null;
+  include_thinking?: boolean;
 }
 
 export interface RAGResponse {
@@ -115,6 +118,9 @@ class RAGApiService {
         query: request.query,
         index_name: indexName,
         top_k: request.top_k || 3,
+        messages: request.messages,
+        conversation_id: request.conversation_id,
+        include_thinking: request.include_thinking ?? false,
       };
 
       console.log('Streaming request data:', requestData);
@@ -143,6 +149,16 @@ class RAGApiService {
       console.error('Streaming setup error:', error);
       throw new Error(`Failed to setup streaming: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
+  }
+
+  async createConversation(name?: string): Promise<{ conversation_id: string; created_at: number }> {
+    const response = await this.api.post('/conversations', { name });
+    return response.data;
+  }
+
+  async getConversation(convId: string, last_n = 50) {
+    const response = await this.api.get(`/conversations/${convId}?last_n=${last_n}`);
+    return response.data;
   }
 
   async healthCheck(): Promise<boolean> {

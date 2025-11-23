@@ -30,6 +30,7 @@ interface ChatState {
   isLoading: boolean;
   datasets: Dataset[];
   selectedDataset: string | null;
+  conversationId: string | null;
   streamingMessageId: string | null;
   streamingThinkingMessageId: string | null;
   streamingStartTime: number | null;
@@ -39,6 +40,7 @@ interface ChatState {
   setLoading: (loading: boolean) => void;
   setDatasets: (datasets: Dataset[]) => void;
   setSelectedDataset: (dataset: string | null) => void;
+  setConversationId: (id: string | null) => void;
   startStreamingMessage: (query: string, dataset?: string) => Promise<void>;
   updateStreamingMessage: (id: string, content: string) => void;
   finishThinkingMessage: (id: string) => void;
@@ -52,6 +54,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   isLoading: false,
   datasets: [],
   selectedDataset: null,
+  conversationId: null,
   streamingMessageId: null,
   streamingThinkingMessageId: null,
   streamingStartTime: null,
@@ -68,6 +71,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   setLoading: (loading) => set({ isLoading: loading }),
   setDatasets: (datasets) => set({ datasets }),
   setSelectedDataset: (dataset) => set({ selectedDataset: dataset }),
+  setConversationId: (id) => set({ conversationId: id }),
   updateStreamingMessage: (id, content) =>
     set((state) => ({
       // Update streaming message content and performance metrics
@@ -130,7 +134,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
     };
 
   try {
-  const stream = await ragApi.streamMessage({ query, index_name: dataset, top_k: 3 });
+  // Build messages array to send: include current user query as a single message
+  const messagesToSend = [{ role: 'user' as const, content: query }];
+  const stream = await ragApi.streamMessage({ query, index_name: dataset, top_k: 3, messages: messagesToSend, conversation_id: get().conversationId ?? null, include_thinking: false });
       const reader = stream.getReader();
       const decoder = new TextDecoder();
   let buf = '';
@@ -184,8 +190,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
           if (jsons.length > 0) {
             for (const json of jsons) {
         try {
-          const obj = JSON.parse(json) as { token?: string; source?: string; seq?: number };
-                if (obj.token) {
+          type TokenEvent = { token?: string; source?: string; seq?: number };
+          type SearchCompleteEvent = { sources?: number; conversation_id?: string };
+          const obj = JSON.parse(json) as TokenEvent | SearchCompleteEvent;
+                if ('token' in obj && !!obj.token) {
                   set((s) => ({ debugEvents: [...s.debugEvents, `[json-token] source=${obj.source || evtType || 'response'} seq=${obj.seq || 0} token=${String(obj.token).slice(0,80)}`].slice(-50) }));
                   const token = String(obj.token || '');
                   const source = String(obj.source || evtType || 'response');
@@ -206,6 +214,16 @@ export const useChatStore = create<ChatState>((set, get) => ({
                       set((s) => ({ debugEvents: [...s.debugEvents, `[token->response] seq=${seq} token=${token.slice(0,40)}`].slice(-50) }));
                       if (!get().hasReceivedFirstToken) set({ hasReceivedFirstToken: true });
                     }
+                  }
+                } else if ('sources' in obj || 'conversation_id' in obj) {
+                  // search_complete or related metadata, attach sources to the response message
+                  const sources = Number((obj as { sources?: number }).sources || 0);
+                  set((cur) => ({ messages: cur.messages.map((m) => (m.id === responseMessageId ? { ...m, performanceMetrics: { ...m.performanceMetrics, sources } } : m)) }));
+                  set((s) => ({ debugEvents: [...s.debugEvents, `[search_complete] sources=${sources}`].slice(-50) }));
+                  if ((obj as { conversation_id?: string }).conversation_id) {
+                    const convId = String((obj as { conversation_id?: string }).conversation_id);
+                    set(() => ({ conversationId: convId }));
+                    set((s) => ({ debugEvents: [...s.debugEvents, `[conversation-created] id=${convId}`].slice(-50) }));
                   }
                 }
               } catch {
@@ -322,6 +340,24 @@ export const useChatStore = create<ChatState>((set, get) => ({
       get().updateStreamingMessage(responseMessageId, `Error: ${err instanceof Error ? err.message : 'Unknown'}`);
       get().finishStreamingMessage(responseMessageId);
       get().finishThinkingMessage(thinkingMessageId);
+    }
+  },
+
+  // Load full conversation messages from backend and replace current message list
+  loadConversation: async (convId: string, last_n = 50) => {
+    try {
+      const data = await ragApi.getConversation(convId, last_n);
+      // data expected: { meta, messages: [{ role, content, timestamp, id }] }
+      if (data?.messages && Array.isArray(data.messages)) {
+  type BackendMessage = { id?: string; role: 'user' | 'assistant' | 'system'; content: string; timestamp?: string | number; performanceMetrics?: Partial<Message['performanceMetrics']> };
+        const msgs = data.messages.map((m: BackendMessage) => ({ id: m.id ?? `${Date.now()}-${Math.random().toString(36).slice(2,6)}`, role: m.role as 'user' | 'assistant', content: m.content, timestamp: new Date(m.timestamp || Date.now()), performanceMetrics: m.performanceMetrics } as Message));
+        set(() => ({ messages: msgs, conversationId: convId } as Partial<ChatState>));
+      } else {
+        set(() => ({ conversationId: convId } as Partial<ChatState>));
+      }
+      set((s) => ({ debugEvents: [...s.debugEvents, `[loadConversation] id=${convId} loaded=${data?.messages?.length ?? 0}`].slice(-50) }));
+    } catch (error) {
+      set((s) => ({ debugEvents: [...s.debugEvents, `[loadConversation:error] ${String(error)}`].slice(-50) }));
     }
   },
 }));
