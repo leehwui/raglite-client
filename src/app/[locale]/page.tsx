@@ -7,11 +7,11 @@ import { ChatInput } from '@/components/ChatInput';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { useChatStore } from '@/lib/chat-store.clean';
 import { ragApi } from '@/lib/api';
-import { MessageSquare, Sparkles } from 'lucide-react';
+import { MessageSquare, Sparkles, PlusSquare } from 'lucide-react';
 
 export default function Home() {
   const t = useTranslations();
-  const { messages, isLoading, datasets, selectedDataset, addMessage, setLoading, setDatasets, setSelectedDataset, startStreamingMessage, debugEvents } = useChatStore();
+  const { messages, isLoading, datasets, selectedDataset, addMessage, setLoading, setDatasets, setSelectedDataset, startStreamingMessage, startConversation, conversationId, debugEvents } = useChatStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -49,12 +49,18 @@ export default function Home() {
     // Add user message
     addMessage({ content, role: 'user' });
 
-    // Check if we have a selected dataset
+  // Check if we have a selected dataset
     if (!selectedDataset) {
       addMessage({
         content: t('chat.noDataset'),
         role: 'assistant'
       });
+      return;
+    }
+
+    // Check that we have an active conversation
+    if (!conversationId) {
+      addMessage({ content: t('chat.startConversationPrompt') || 'Please start a conversation first.', role: 'assistant' });
       return;
     }
 
@@ -78,9 +84,29 @@ export default function Home() {
       {/* Sidebar - can be expanded later for chat history */}
       <div className="hidden md:flex w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex-col">
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-6 h-6 text-blue-600" />
-            <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">RAGLite</h1>
+          <div className="flex items-center gap-2 justify-between">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-6 h-6 text-blue-600" />
+              <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">RAGLite</h1>
+            </div>
+            <div>
+              <button
+                onClick={async () => {
+                  setLoading(true);
+                  try {
+                    await startConversation();
+                  } catch (e) {
+                    console.error('Failed to start conversation', e);
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                className="flex items-center gap-2 px-3 py-1 rounded-md bg-green-600 hover:bg-green-700 text-white text-sm"
+              >
+                <PlusSquare className="w-4 h-4" />
+                <span>{conversationId ? t('chat.newConversation') : t('chat.startConversation')}</span>
+              </button>
+            </div>
           </div>
         </div>
         <div className="flex-1 p-4">
@@ -106,6 +132,17 @@ export default function Home() {
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   {t('chat.poweredBy')}
                 </p>
+                {conversationId && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    <span className="font-mono">conv:{conversationId.slice(0, 8)}</span>
+                    <button
+                      onClick={() => navigator.clipboard.writeText(conversationId)}
+                      className="ml-2 px-2 py-0.5 rounded text-xs bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -163,7 +200,7 @@ export default function Home() {
           datasets={datasets}
           selectedDataset={selectedDataset}
           onDatasetChange={setSelectedDataset}
-          disabled={isLoading}
+          disabled={isLoading || !conversationId}
         />
         {/* Debug Panel (visible in dev only) */}
         <div className="fixed bottom-4 right-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 max-w-xs text-xs text-gray-500 dark:text-gray-300 shadow-lg z-50">

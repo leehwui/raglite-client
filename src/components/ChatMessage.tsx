@@ -1,5 +1,5 @@
  'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Message, useChatStore } from '@/lib/chat-store.clean';
 import { ChevronDown, ChevronUp, Lightbulb } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -14,6 +14,14 @@ export function ChatMessage({ message }: ChatMessageProps) {
   const isThinkingCompleted = !!message.thinkingCompleted;
   const isThinkingAny = isThinkingActive || isThinkingCompleted;
   const [showThinking, setShowThinking] = useState(false);
+  useEffect(() => {
+    if (!showThinking && isThinkingAny && message.content && message.content.trim()) {
+      // Defer state update slightly to avoid synchronous setState during render
+      const id = window.setTimeout(() => setShowThinking(true), 0);
+      return () => window.clearTimeout(id);
+    }
+    return;
+  }, [message.content, isThinkingAny, showThinking]);
   // Do not auto-open/auto-close the thinking bubble; the user controls visibility with the chevron.
   const t = useTranslations();
   const hasActiveThinking = useChatStore((s) => s.messages.some((m) => m.isThinking));
@@ -51,6 +59,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
           console.log('[ChatMessage] render', { id: message.id, isThinking: message.isThinking, content: message.content.slice(0, 50) });
           return null;
         })()}
+        {/* Auto-expand the thinking bubble when we receive content */}
         <div className="whitespace-pre-wrap">
           {isThinkingAny ? (
             <>

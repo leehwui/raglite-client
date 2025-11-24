@@ -20,6 +20,9 @@
   "thoughts": "思路",
     "error": "发生错误",
     "noDataset": "请先选择数据集",
+  "startConversationPrompt": "请先创建一个会话",
+  "startConversation": "开始会话",
+  "newConversation": "新会话",
     "poweredBy": "由先进AI和检索增强生成技术提供支持",
     "welcomeMessage": "与我们的AI助手开始对话。提出问题，获取任务帮助，或探索检索增强生成的力量。"
   },

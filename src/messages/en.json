@@ -20,6 +20,9 @@
   "thoughts": "Thoughts",
     "error": "An error occurred",
     "noDataset": "Please select a dataset first",
+  "startConversationPrompt": "Please start a conversation first",
+  "startConversation": "Start Conversation",
+  "newConversation": "New Conversation",
     "poweredBy": "Powered by advanced AI and retrieval-augmented generation",
     "welcomeMessage": "Start a conversation with our AI assistant. Ask questions, get help with tasks, or explore the power of retrieval-augmented generation."
   },

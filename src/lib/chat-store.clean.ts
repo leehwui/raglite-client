@@ -42,6 +42,7 @@ interface ChatState {
   setSelectedDataset: (dataset: string | null) => void;
   setConversationId: (id: string | null) => void;
   startStreamingMessage: (query: string, dataset?: string) => Promise<void>;
+  startConversation: (name?: string) => Promise<string | null>;
   updateStreamingMessage: (id: string, content: string) => void;
   finishThinkingMessage: (id: string) => void;
   removeMessage: (id: string) => void;
@@ -116,6 +117,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }),
 
   startStreamingMessage: async (query: string, dataset?: string) => {
+    // Guard: don't allow streaming if there's no conversation started
+    if (!get().conversationId) {
+      set((s) => ({ debugEvents: [...s.debugEvents, `[blocked] startStreamingMessage called without conversationId`].slice(-50) }));
+      // Add an assistant message instructing the user to start a conversation
+      get().addMessage({ content: 'Please start a conversation first using the Start Conversation button.', role: 'assistant' });
+      return;
+    }
   const responseMessageId = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
   const thinkingMessageId = `think_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
   // Only set thinking message on start; don't add response placeholder so the UI won't show an empty final answer while thinking
@@ -134,9 +142,15 @@ export const useChatStore = create<ChatState>((set, get) => ({
     };
 
   try {
-  // Build messages array to send: include current user query as a single message
-  const messagesToSend = [{ role: 'user' as const, content: query }];
-  const stream = await ragApi.streamMessage({ query, index_name: dataset, top_k: 3, messages: messagesToSend, conversation_id: get().conversationId ?? null, include_thinking: false });
+  // Build messages array to send: include last N historical messages + current user query.
+  const contextWindow = 6;
+  const history = get().messages
+    .filter((m) => m.role === 'user' || m.role === 'assistant')
+    .slice(-contextWindow)
+    .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content, id: m.id }));
+  const messagesToSend = [...history, { role: 'user' as const, content: query }];
+  set((s) => ({ debugEvents: [...s.debugEvents, `[stream-start] messages=${messagesToSend.length}`].slice(-50) }));
+  const stream = await ragApi.streamMessage({ query, index_name: dataset, top_k: 3, messages: messagesToSend, conversation_id: get().conversationId ?? null, include_thinking: true });
       const reader = stream.getReader();
       const decoder = new TextDecoder();
   let buf = '';
@@ -222,8 +236,18 @@ export const useChatStore = create<ChatState>((set, get) => ({
                   set((s) => ({ debugEvents: [...s.debugEvents, `[search_complete] sources=${sources}`].slice(-50) }));
                   if ((obj as { conversation_id?: string }).conversation_id) {
                     const convId = String((obj as { conversation_id?: string }).conversation_id);
-                    set(() => ({ conversationId: convId }));
-                    set((s) => ({ debugEvents: [...s.debugEvents, `[conversation-created] id=${convId}`].slice(-50) }));
+                    const current = get().conversationId;
+                    if (!current) {
+                      set(() => ({ conversationId: convId }));
+                      set((s) => ({ debugEvents: [...s.debugEvents, `[conversation-created] id=${convId}`].slice(-50) }));
+                    } else if (current === convId) {
+                      // Already set; ignore duplicate creation event
+                      set((s) => ({ debugEvents: [...s.debugEvents, `[conversation] id=${convId} (unchanged)`].slice(-50) }));
+                    } else {
+                      // Different conversation id seen; log and update
+                      set(() => ({ conversationId: convId }));
+                      set((s) => ({ debugEvents: [...s.debugEvents, `[conversation-switched] from=${current} to=${convId}`].slice(-50) }));
+                    }
                   }
                 }
               } catch {
@@ -340,6 +364,34 @@ export const useChatStore = create<ChatState>((set, get) => ({
       get().updateStreamingMessage(responseMessageId, `Error: ${err instanceof Error ? err.message : 'Unknown'}`);
       get().finishStreamingMessage(responseMessageId);
       get().finishThinkingMessage(thinkingMessageId);
+    }
+  },
+  // Create a new conversation on the backend, clear messages and reset streaming state.
+  startConversation: async (name?: string) => {
+    try {
+      // If there is an active streaming, finalize it first
+      const currentStreaming = get().streamingMessageId;
+      const currentThinking = get().streamingThinkingMessageId;
+      if (currentStreaming) {
+        get().finishStreamingMessage(currentStreaming);
+      }
+      if (currentThinking) {
+        get().finishThinkingMessage(currentThinking);
+      }
+      set((s) => ({ debugEvents: [...s.debugEvents, `[startConversation] calling createConversation`].slice(-50) }));
+      const res = await ragApi.createConversation(name);
+      const convId = res?.conversation_id ?? null;
+      if (convId) {
+        set(() => ({ conversationId: convId, messages: [] }));
+        set((s) => ({ debugEvents: [...s.debugEvents, `[conversation-created] id=${convId} via=startConversation`].slice(-50) }));
+        return convId;
+      } else {
+        set((s) => ({ debugEvents: [...s.debugEvents, `[startConversation:error] invalid response`].slice(-50) }));
+        return null;
+      }
+    } catch (error) {
+      set((s) => ({ debugEvents: [...s.debugEvents, `[startConversation:error] ${String(error)}`].slice(-50) }));
+      return null;
     }
   },
 

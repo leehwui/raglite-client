@@ -81,7 +81,7 @@ export function ChatInput({ onSendMessage, datasets, selectedDataset, onDatasetC
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder={t('chat.placeholder')}
+                placeholder={disabled ? t('chat.startConversationPrompt') : t('chat.placeholder')}
                 disabled={disabled}
                 className="w-full resize-none bg-transparent border-none outline-none text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] max-h-32"
                 rows={1}
@@ -106,6 +106,7 @@ export function ChatInput({ onSendMessage, datasets, selectedDataset, onDatasetC
 
               {/* Dataset Selector and Send Button */}
               <div className="flex items-center gap-3">
+                {/* Start Conversation moved to sidebar */}
                 {/* Dataset Selector */}
                 <div className="relative" ref={dropdownRef}>
                   <button
